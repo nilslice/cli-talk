@@ -1,0 +1,116 @@
+CLI Gotchas
+What I learned building the Ponzu CLI
+24 May 2017
+
+Steve Manuel
+@nilslice
+
+* Overview
+- Ponzu
+- CLI & command coupling
+- Subcommands, nested flags
+- Advanced syntax: "What the Shell?"
+
+
+
+
+* What is Ponzu?
+
+Headless CMS and JSON API server framework
+
+.image https://raw.githubusercontent.com/ponzu-cms/ponzu/master/ponzu-banner.png
+.link https://github.com/ponzu-cms/ponzu
+
+CLI Usage
+- generate everything: projects, content types, certificates
+- toggle features: auto-HTTPS via Let's Encrypt or self-signed (`--https`, `--dev-https`)
+- build and run project
+- download and install addons
+
+
+* CLI & command coupling
+
+- Easy for problems to arise when CLI and underlying program are written at the same time
+- Try to design one before the other
+
+.code flags.go
+
+
+
+
+
+* CLI & command coupling
+
+*bad:*
+.link https://github.com/ponzu-cms/ponzu/blob/0.9.1/cmd/ponzu/main.go tightly coupled
+
+- Clearly unaware of the `flag.FlagSet` type
+- Was writing & designing CLI and implementation together
+
+*better:*
+.link https://github.com/ponzu-cms/ponzu/blob/master/cmd/ponzu/main.go less coupled
+
+- Commands were already known, implementations done
+- Hindsight is 20/20
+- Goal should always be to design first 
+- h/t to [[@martint17r][https://github.com/martint17r]]
+
+
+
+
+
+* Subcommands, nested flags
+
+.code nested.go
+
+
+
+
+
+* Subcommands, nested flags
+
+- Huge nested and cascading switch with global flags 
+- `flag.Args()` starts to be confusing when nested beyond top level
+
+*Use* *the* *right* *tools:*
+- As the CLI footprint grows, maintaining becomes a headache
+- Best to converge on a standard
+
+1. `flag.FlagSet`
+- Each subcommand gets a dedicated set of flags
+- Still switch-heavy
+
+2. `cobra` - CLI framework & generator
+.link https://github.com/spf13/cobra] github.com/spf13/cobra
+
+
+* Advanced syntax: "What the Shell?"
+- Go is cross-platform, so should be your CLI
+- Keep in mind reserved keywords or special characters
+
+*Going* *beyond* *commands* *and* *flags:*
+
+- Custom syntax in args can be parsed to add features
+- CLI is "lingua franca" of the developer world, use it to help language new-comers  
+
+
+* Advanced syntax: "What the Shell?"
+Example: (Slice Types)
+
+   $ ponzu gen c review title:string photos:[]string:file
+
+(spoiler: broken)
+
+- `[]` holds characters for a list of characters to match
+- Must be put inside quotes: 
+    
+    $ ponzu gen c title:string photos:"[]string":file
+
+Example: (Ponzu References)
+
+    $ ponzu gen c review title:string author:*author,name
+
+- `*` is wildcard expander, cannot use
+- `@` symbol can be substitued, still "pointer-like" in syntax
+
+    $ ponzu gen c review title:string author:@author,name
